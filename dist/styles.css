@@ -109,9 +109,9 @@ h1 {
 }
 .levels {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: 0.5rem;
-  margin: 2rem 0;
+  margin: 1rem 0 2rem;
 }
 .level {
   padding: 0.6rem 0.3rem;
@@ -126,6 +126,13 @@ h1 {
   border-color: #1b9294;
   color: #167275;
 }
+.level.current.solved { background: #176f59; color: white; }
+.progress-label { font-size: 0.8rem; color: #586879; margin: 1.4rem 0 0.4rem; }
+progress { width: 100%; height: 7px; accent-color: #167275; }
+.mission-card { border-left: 3px solid #e66a22; background: #fff2e7; padding: 0.8rem 1rem; border-radius: 0 8px 8px 0; margin-bottom: 1rem; }
+.mission-card strong { color: #8e451c; font-size: 0.85rem; }
+.mission-card p { margin: 0.35rem 0 0; font-size: 0.85rem; line-height: 1.65; word-break: keep-all; }
+.mission-card .mission-detail { color: #65513f; font-size: 0.75rem; }
 .chapters label {
   font-size: 0.875rem;
   display: block;
@@ -227,6 +234,28 @@ h1 {
   font-size: 1.1rem;
   font-weight: 800;
 }
+.cell.filter.amber { background: #ffead1; color: #965012; }
+.optic { width: 100%; height: 100%; display: block; fill: none; stroke: currentColor; stroke-width: 4; stroke-linecap: round; }
+.optic circle { stroke-width: 1.5; stroke-dasharray: 3 4; }
+.cell .optic { width: 86%; height: 86%; }
+.cell.fixed:disabled { opacity: 1; background: #dbe1e8; color: #455364; }
+.locked { position: absolute; bottom: 1px; right: 2px; font-size: 0.55rem; background: #fff; border-radius: 2px; padding: 0 2px; line-height: 1.4; }
+.cell:focus-visible { outline-offset: -3px; z-index: 2; }
+.board.complete { box-shadow: 0 0 0 3px #319477; border-radius: 5px; }
+.board.complete .cell:disabled { opacity: 1; }
+.cell.checkpoint { color: #7e5816; background: #fff4d6; font-size: 1.4rem; }
+.cell.checkpoint.cyan { color: #137f83; background: #def3f4; }
+.cell.checkpoint small { position: absolute; bottom: 0; right: 2px; font-size: 0.6rem; }
+.cell.checkpoint.lit { box-shadow: inset 0 0 0 2px #167275; background: #d5f4ee; }
+.cell.lit::after { content: "✓"; position: absolute; top: 0; left: 2px; font-size: 0.65rem; font-weight: 800; color: #176f59; }
+.cell.wrong-color { box-shadow: inset 0 0 0 2px #be6832; }
+.cell.hazard { color: #992b44; background: #f8e6e9; border: 1px dashed #c9687c; font-weight: 800; }
+.cell.hazard.triggered { color: white; background: #aa2945; border-style: solid; }
+.constraints { font-size: 0.8rem; color: #586879; margin: 0.4rem 0; }
+.constraints.warning { color: #a0213d; font-weight: 700; }
+.keyboard-help, .path-details { font-size: 0.75rem; line-height: 1.65; color: #586879; }
+.path-details { border-top: 1px solid var(--line); padding-top: 0.8rem; }
+.path-details ol { max-height: 230px; overflow: auto; padding-left: 1.8rem; }
 .cell.wall {
   background: #c9d2db;
 }
@@ -301,6 +330,8 @@ h1 {
 }
 .tool > strong {
   width: 30px;
+  height: 30px;
+  flex-shrink: 0;
   color: var(--orange);
   font-size: 1.5rem;
 }
@@ -505,5 +536,6 @@ footer {
 @media (prefers-reduced-motion: reduce) {
   * {
     transition: none !important;
+    animation: none !important;
   }
 }
