@@ -23,26 +23,30 @@
     </header>
     <main>
       <aside class="chapters">
-        <p class="eyebrow">THE OPTICAL WORKSHOP</p>
-        <h1>빛을<br />연결하세요.</h1>
-        <p class="intro">
-          한 줄기의 빛, 여러 개의 조건.<br />6개 장 · 18단계의 회로를 완성하세요.
-        </p>
+        <h1>빛의 미궁</h1>
         <p id="campaign-progress" class="progress-label">이 코드에서 0 / 18 완료</p>
         <progress id="campaign-meter" max="18" value="0" aria-label="현재 코드의 완료 단계 수"></progress>
         <div id="levels" class="levels" role="group" aria-label="단계 선택, 세 단계마다 새 장"></div>
         <label for="seed">퍼즐 코드</label>
         <div class="seed-row">
-          <input id="seed" maxlength="40" /><button id="apply-seed">
-            적용
+          <input id="seed" maxlength="40" autocomplete="off" autocapitalize="none" spellcheck="false" /><button id="apply-seed">
+            시작
           </button>
         </div>
-        <button id="new-puzzle">새 퍼즐 세트</button>
+        <label for="mode">진행 방식</label>
+        <select id="mode"><option value="practice">연습</option><option value="limited">제한 이동</option></select>
+        <label for="recent">최근 코드</label>
+        <select id="recent"></select>
+        <button id="new-puzzle">새 세트</button>
+        <div id="resume-panel" class="resume-panel" hidden>
+          <p id="resume-label"></p>
+          <button id="continue">이어하기</button>
+        </div>
       </aside>
       <section class="play">
         <div class="board-heading">
           <div>
-            <p id="stage-number" class="eyebrow">EXPERIMENT 01 / 18</p>
+            <p id="stage-number" class="eyebrow">1 / 18단계 · 연습</p>
             <h2 id="stage-title">네 번의 방향 전환</h2>
           </div>
           <div class="counter">
@@ -51,9 +55,10 @@
         </div>
         <div class="mission-card">
           <strong id="chapter-title">1장 · 반사의 설계</strong>
-          <p id="mission">목표에서 거꾸로 생각해 보세요.</p>
+          <p id="mission">목표에 빛을 연결하세요.</p>
           <p id="mission-detail" class="mission-detail"></p>
         </div>
+        <p id="budget" class="budget" hidden></p>
         <div class="board-shell">
           <div
             id="board"
@@ -72,7 +77,7 @@
         <div class="toolbar">
           <button id="undo">되돌리기</button
           ><button id="reset">처음 배치</button
-          ><button id="hint">한 단계 힌트</button
+          ><button id="hint">힌트</button
           ><span id="targets">목표 0 / 1</span>
         </div>
         <p id="constraints" class="constraints"></p>
@@ -81,19 +86,17 @@
         <button id="next" class="next" hidden>다음 퍼즐</button>
         <p id="keyboard-help" class="keyboard-help">Tab으로 장치 선택 · Enter/Space로 회전 · 화살표로 같은 행/열 장치 이동</p>
         <details class="path-details">
-          <summary>현재 광선 경로를 글로 확인</summary>
-          <p>각 광선이 도착한 칸과 색입니다. 분기된 광선은 이어서 표시됩니다.</p>
+          <summary>광선 경로</summary>
           <ol id="path-text"></ol>
         </details>
         <p id="notice" role="status"></p>
       </section>
       <aside class="guide">
-        <p class="eyebrow">YOUR TOOLKIT</p>
         <div class="tool">
           <strong aria-hidden="true"><svg class="optic" viewBox="0 0 48 48"><line x1="10" y1="38" x2="38" y2="10" /></svg></strong>
           <div>
             <h3>거울</h3>
-            <p>누르면 대각선 방향이 바뀝니다. 입사한 빛은 90° 꺾입니다. 필요 없는 장치도 있습니다.</p>
+            <p>누르면 방향이 바뀌며 빛을 90° 꺾습니다.</p>
           </div>
         </div>
         <div class="tool">
@@ -107,14 +110,14 @@
           <strong aria-hidden="true">◇</strong>
           <div>
             <h3>체크포인트 · 2장부터</h3>
-            <p>빛을 통과시키는 필수 경유지입니다. A/C가 있으면 그 색으로 통과하세요.</p>
+            <p>모두 통과하세요. A/C는 필요한 색입니다.</p>
           </div>
         </div>
         <div class="tool">
           <strong aria-hidden="true">×</strong>
           <div>
             <h3>금지 센서 · 5장부터</h3>
-            <p>빛이 하나라도 닿으면 완료할 수 없습니다. 6장 후반에는 고정 거울도 등장합니다.</p>
+            <p>빛이 닿으면 완료할 수 없습니다.</p>
           </div>
         </div>
         <div class="tool">
@@ -132,21 +135,25 @@
           </div>
         </div>
         <div class="best">
-          <span>이 퍼즐의 내 최고</span><strong id="best">—</strong>
+          <span>스스로 완료 · 최고</span><strong id="best">—</strong>
+          <span>힌트 사용 · 최고</span><strong id="assisted-best">—</strong>
         </div>
         <details>
           <summary>기록과 규칙</summary>
           <p>
-            목표와 경유지를 모두 켜고 금지 센서를 피하면 완료입니다. 목표와 벽은 빛을 멈춥니다.
+            목표와 벽은 빛을 멈춥니다. 고정 거울은 변경할 수 없습니다.
             1,000점에서 조작당 15점, 힌트당 120점을 차감합니다. 되돌리기도 조작입니다.
-            최근 256번 회전을 되돌릴 수 있습니다. 처음 배치는 점수와 힌트도 초기화합니다.
-            별은 점수 구간이며 최소 이동 수가 아닙니다. 기록은 이 브라우저에만 최대 120개 저장됩니다.
-            같은 버전·코드는 같은 퍼즐입니다. v2는 이전 버전 기록과 구분합니다. 색 변환은 게임 규칙입니다.
+            처음 배치는 조작·힌트를 초기화합니다. 최근 256번 회전을 되돌릴 수 있습니다.
+            제한 이동은 표시된 조작 수 안에 완료하세요. 힌트는 별도 기록입니다.
+            같은 v2 코드·단계는 같은 배치입니다. 코드를 시작하거나 최근 코드·단계·방식을 선택하면 처음 배치부터 시작합니다.
           </p>
-          <button id="clear">내 기록 삭제</button>
+          <p id="legacy-best"></p>
+          <p id="legacy-progress"></p>
+          <p>이 브라우저에 최근 코드 12개, 마지막 진행 1개, 완료 기록 120개를 저장합니다. 저장 크기는 최대 512KiB, 판별 입력은 최대 1,024회입니다. 갤러리에는 스스로 완료한 단계 수만 공유합니다.</p>
+          <button id="clear">기록 모두 삭제</button>
         </details>
       </aside>
     </main>
-    <footer>LIGHT ROUTE / EVERY TURN CHANGES THE PATH.</footer>
+    <footer>LIGHT ROUTE</footer>
   </body>
 </html>

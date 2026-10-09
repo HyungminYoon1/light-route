@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { N, TITLES, TRACE_LIMIT, GENERATION_LIMIT, makePuzzle, trace, rotatePiece, puzzleScore, nextHint } from "../dist/src/model.js";
+import { challengePlan } from "../dist/src/session.js";
 
 const cellKey = ({ x, y }) => `${x},${y}`;
 const sorted = (values) => [...values].sort();
@@ -67,6 +68,13 @@ test("all 18 fallback stages are reachable without any random search", () => {
     assert.equal(result.visited.length, p.checkpoints.length);
     assert.equal(result.triggered.length, 0);
     assert.ok(!trace(p).solved);
+    const plan = challengePlan(p), legal = p.pieces.map((piece) => ({ ...piece }));
+    for (const index of plan.rotations) {
+      assert.ok(!legal[index].fixed);
+      legal[index] = rotatePiece(legal[index]);
+    }
+    assert.deepEqual(referenceTrace(p, legal), result);
+    assert.ok(plan.rotations.length <= plan.budget);
     const occupants = [p.source, ...p.pieces, ...p.goals, ...p.checkpoints, ...p.hazards, ...p.walls];
     assert.equal(new Set(occupants.map(cellKey)).size, occupants.length);
   }

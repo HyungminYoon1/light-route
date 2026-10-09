@@ -14,7 +14,8 @@ body {
   margin: 0;
 }
 button,
-input {
+input,
+select {
   font: inherit;
 }
 button {
@@ -35,6 +36,7 @@ button:disabled {
 }
 button:focus-visible,
 input:focus-visible,
+select:focus-visible,
 a:focus-visible {
   outline: 3px solid #16a4a7;
   outline-offset: 3px;
@@ -149,6 +151,12 @@ progress { width: 100%; height: 7px; accent-color: #167275; }
   border-radius: 6px;
   padding: 0.5rem;
 }
+.chapters select { width: 100%; min-width: 0; padding: 0.6rem; border: 1px solid var(--line); border-radius: 6px; background: white; }
+.resume-panel { padding: 0.7rem; border: 1px solid #b7dacf; border-radius: 8px; background: #e1f4ee; }
+.resume-panel p { font-size: 0.8rem; line-height: 1.6; overflow-wrap: anywhere; margin: 0 0 0.5rem; }
+.resume-panel button { width: 100%; }
+.budget { font-size: 0.875rem; font-weight: 700; color: #8e451c; }
+.level.assisted:not(.solved) { border-style: dashed; border-color: #a47835; }
 .seed-row button {
   font-size: 0.875rem;
   padding: 0.5rem;
@@ -455,19 +463,20 @@ footer {
     padding-bottom: 0.3rem;
   }
   .level {
-    min-width: 36px;
+    min-width: 44px;
+    min-height: 44px;
   }
   .chapters label {
-    display: none;
+    display: block;
   }
   .seed-row {
-    display: inline-flex;
-    width: calc(100% - 125px);
+    display: flex;
+    width: 100%;
   }
   .chapters > button {
-    display: inline-block;
-    width: 115px;
-    margin: 0 0.3rem;
+    display: block;
+    width: 100%;
+    margin: 0.7rem 0;
     font-size: 0.8rem;
   }
   .board-heading h2 {
@@ -515,6 +524,7 @@ footer {
   .toolbar button {
     padding: 0.5rem;
     font-size: 0.8rem;
+    min-height: 44px;
   }
   .toolbar span {
     font-size: 0.8rem;
@@ -532,6 +542,7 @@ footer {
   header > a:last-child {
     font-size: 0.8rem;
   }
+  .seed-row input, .seed-row button, .chapters select, .chapters > button, .resume-panel button { min-height: 44px; }
 }
 @media (prefers-reduced-motion: reduce) {
   * {

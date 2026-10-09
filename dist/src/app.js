@@ -3,7 +3,6 @@ import {
   freshSeed,
   cleanSeed,
   loadLocal,
-  saveLocal,
   announce,
   tool,
 } from "./core.js";
@@ -12,27 +11,28 @@ import {
   TITLES,
   CAMPAIGN,
   VERSION,
-  makePuzzle,
-  rotatePiece,
   trace,
   puzzleScore,
-  nextHint,
 } from "./model.js";
-const KEY = "light-route-v1";
-let saved = loadLocal(KEY, {}),
-  best =
-    saved && typeof saved === "object" && !Array.isArray(saved) ? saved : {};
-let seed = freshSeed(),
-  stage = 1,
+import { createRun, applyAction, restoreRun, runStatus, rememberRun, emptyStore,
+  stageRecords, recordScore, independentCount, MAX_ACTIONS } from "./session.js";
+import { readStore, writeStore, clearStore } from "./storage.js";
+import { reportProgress, clearProgress } from "./progress.js";
+const previous = loadLocal("light-route-v1", {});
+const legacy = previous && typeof previous === "object" && !Array.isArray(previous) ? previous : {};
+let store = readStore(), run, awaitingResume = Boolean(store.last);
+let seed = store.last?.seed ?? freshSeed(),
+  stage = store.last?.stage ?? 1,
+  mode = store.last?.mode ?? "practice",
   puzzle,
   pieces,
   moves = 0,
   hints = 0,
-  history = [],
   completed = false,
   highlight = -1;
 const ctx = $("rays").getContext("2d");
-const recordKey = (level = stage) => VERSION + "|" + seed + "-" + level;
+const records = (level = stage) => stageRecords(store, seed, level, mode);
+const modeName = () => mode === "limited" ? "제한 이동" : "연습";
 const coordinate = (x, y) => `${y + 1}행 ${x + 1}열`;
 function opticIcon(piece) {
   const ns = "http://www.w3.org/2000/svg";
@@ -50,45 +50,68 @@ function opticIcon(piece) {
   }
   return svg;
 }
-function save() {
-  while (Object.keys(best).length > 120) delete best[Object.keys(best)[0]];
-  if (!saveLocal(KEY, best))
-    announce("이 브라우저에 기록을 저장할 수 없습니다.");
+function persist() {
+  const oldCount = independentCount(store);
+  const next = rememberRun(store, run);
+  if (!writeStore(next)) {
+    announce("저장할 수 없습니다. 이 화면에서 계속 진행할 수 있습니다.");
+    return;
+  }
+  store = next;
+  const count = independentCount(store);
+  if (runStatus(run) === "complete" && (run.hints === 0 || count !== oldCount)) {
+    const ok = count ? reportProgress(count, TITLES.length) : clearProgress();
+    if (!ok) announce("퍼즐 기록은 저장했습니다. 갤러리 요약은 갱신하지 못했습니다.");
+  }
 }
-function start() {
-  puzzle = makePuzzle(stage, seed);
-  pieces = puzzle.pieces.map((p) => ({ ...p }));
-  moves = 0;
-  hints = 0;
-  history = [];
-  completed = false;
-  highlight = -1;
+function start({ initial = false } = {}) {
+  run = createRun(stage, seed, mode);
+  if (!initial) {
+    awaitingResume = false;
+    announce("");
+    persist();
+  }
+  render();
+}
+function render() {
+  ({ puzzle, pieces, moves, hints, highlight } = run);
+  completed = runStatus(run) === "complete";
+  const stopped = runStatus(run) !== "playing" || awaitingResume;
+  const focusedPiece = document.activeElement?.dataset.piece;
+  const focusedStage = document.activeElement?.dataset.stage;
+  const result = trace(puzzle, pieces);
   $("seed").value = seed;
-  $("stage-number").textContent =
-    "EXPERIMENT " + String(stage).padStart(2, "0") + " / " + TITLES.length;
+  $("mode").value = mode;
+  $("stage-number").textContent = `${stage} / ${TITLES.length}단계 · ${modeName()}`;
   $("stage-title").textContent = puzzle.title;
   $("chapter-title").textContent = `${puzzle.tier + 1}장 · ${CAMPAIGN[puzzle.tier].name}`;
   $("mission").textContent = CAMPAIGN[puzzle.tier].rule;
   $("mission-detail").textContent = `목표 ${puzzle.goals.length}개 · 경유지 ${puzzle.checkpoints.length}개` + (puzzle.hazards.length ? ` · 금지 센서 ${puzzle.hazards.length}개는 꺼 두기` : "") + (pieces.some((p) => p.fixed) ? " · 고정 거울 포함" : "");
-  $("result").hidden = true;
-  $("next").hidden = true;
-  announce("");
-  render();
-}
-function render() {
-  const focusedPiece = document.activeElement?.dataset.piece;
-  const focusedStage = document.activeElement?.dataset.stage;
-  const result = trace(puzzle, pieces);
+  $("resume-panel").hidden = !awaitingResume;
+  if (awaitingResume) $("resume-label").textContent = `${store.last.seed} · ${store.last.stage}단계 · ${modeName()} · 조작 ${store.last.moves}회 · 힌트 ${store.last.hints}회`;
+  $("recent").replaceChildren(new Option("최근 코드 선택", ""), ...store.recent.map((e) => new Option(`${e.seed} · ${e.stage}단계`, e.seed)));
+  $("recent").disabled = !store.recent.length;
+  $("budget").textContent = mode === "limited" ? `남은 조작 ${Math.max(0, run.budget - moves)} / ${run.budget}` : "";
+  $("budget").hidden = mode !== "limited";
   $("moves").textContent = String(moves).padStart(2, "0");
   $("targets").textContent =
     "목표 " + result.lit.length + " / " + puzzle.goals.length;
   $("constraints").textContent = `경유지 ${result.visited.length} / ${puzzle.checkpoints.length}` + (puzzle.hazards.length ? ` · 금지 센서 ${result.triggered.length}개 작동` : "");
   $("constraints").classList.toggle("warning", result.triggered.length > 0);
-  $("best").textContent = best[recordKey()]
-    ? best[recordKey()] + " PT"
-    : "—";
-  const cleared = TITLES.filter((_, i) => best[recordKey(i + 1)]).length;
-  $("campaign-progress").textContent = `이 코드에서 ${cleared} / ${TITLES.length} 완료`;
+  const ownRecords = records();
+  const bestOf = (assisted) => Math.max(0, ...ownRecords.filter((r) => Boolean(r.hints) === assisted).map(recordScore));
+  $("best").textContent = bestOf(false) ? bestOf(false) + "점" : "—";
+  $("assisted-best").textContent = bestOf(true) ? bestOf(true) + "점" : "—";
+  const oldScore = legacy && typeof legacy === "object" ? legacy[VERSION + "|" + seed + "-" + stage] : null;
+  $("legacy-best").textContent = Number.isInteger(oldScore) && oldScore >= 20 && oldScore <= 1000 ? `이전 최고 ${oldScore}점 · 힌트 여부 미기록` : "";
+  const legacyCleared = TITLES.filter((_, i) => {
+    const score = legacy[VERSION + "|" + seed + "-" + (i + 1)];
+    return Number.isInteger(score) && score >= 20 && score <= 1000;
+  }).length;
+  $("legacy-progress").textContent = legacyCleared ? `이 코드의 이전 완료 ${legacyCleared}/${TITLES.length} · 힌트 여부 미기록` : "";
+  const cleared = TITLES.filter((_, i) => records(i + 1).some((r) => !r.hints)).length;
+  const assistedCleared = TITLES.filter((_, i) => records(i + 1).some((r) => r.hints)).length;
+  $("campaign-progress").textContent = `${modeName()} · 스스로 완료 ${cleared}/${TITLES.length} · 힌트 완료 ${assistedCleared}`;
   $("campaign-meter").value = cleared;
   $("levels").replaceChildren(
     ...TITLES.map((t, i) => {
@@ -96,10 +119,11 @@ function render() {
       b.className =
         "level" +
         (stage === i + 1 ? " current" : "") +
-        (best[recordKey(i + 1)] ? " solved" : "");
+        (records(i + 1).some((r) => !r.hints) ? " solved" : "") +
+        (records(i + 1).some((r) => r.hints) ? " assisted" : "");
       b.dataset.stage = i + 1;
       b.textContent = String(i + 1).padStart(2, "0");
-      b.setAttribute("aria-label", `${i + 1}단계 ${t}, ${CAMPAIGN[Math.floor(i / 3)].name}` + (best[recordKey(i + 1)] ? ", 완료" : ""));
+      b.setAttribute("aria-label", `${i + 1}단계 ${t}, ${CAMPAIGN[Math.floor(i / 3)].name}` + (records(i + 1).some((r) => !r.hints) ? ", 스스로 완료" : records(i + 1).length ? ", 힌트 완료" : ""));
       b.title = `${CAMPAIGN[Math.floor(i / 3)].name} · ${t}`;
       b.setAttribute("aria-pressed", String(stage === i + 1));
       b.onclick = () => {
@@ -147,7 +171,7 @@ function render() {
                 ? "광선 분기 " + (piece.turn ? "왼쪽 위에서 오른쪽 아래" : "왼쪽 아래에서 오른쪽 위")
                 : "거울 " + (piece.turn ? "왼쪽 위에서 오른쪽 아래" : "왼쪽 아래에서 오른쪽 위")) + (piece.fixed ? ", 고정, 회전 불가" : ", 눌러 변경"),
         );
-        cell.disabled = completed || piece.fixed;
+        cell.disabled = stopped || piece.fixed;
         cell.classList.toggle("focus-hint", highlight === i);
         cell.onclick = () => rotate(i);
       } else if (goal || checkpoint) {
@@ -211,74 +235,48 @@ function render() {
     item.textContent = `${s.color} 빛: ${coordinate(s.x2, s.y2)} 도착 (${direction})`;
     return item;
   }));
-  if (!completed) $("status").textContent = highlight >= 0
-    ? `${coordinate(pieces[highlight].x, pieces[highlight].y)}의 표시한 장치를 한 번 바꿔보세요. 힌트는 회당 120점입니다.`
-    : result.triggered.length ? "금지 센서에 빛이 닿았습니다. 분기와 우회 경로를 다시 확인하세요."
-    : result.loop ? "광선이 순환합니다. 경로를 확인하고 거울이나 분기를 바꿔보세요."
-    : `목표 ${result.lit.length}/${puzzle.goals.length} · 경유지 ${result.visited.length}/${puzzle.checkpoints.length}` + (result.wrongColor.length ? " · 색이 맞지 않는 도착점이 있습니다." : " · 장치를 눌러 경로를 연결하세요.");
-  $("undo").disabled = !history.length || completed;
-  $("hint").disabled = completed;
-  if (result.solved && !completed) {
-    completed = true;
+  $("status").textContent = awaitingResume ? "이어하기 또는 새 세트를 선택하세요."
+    : runStatus(run) === "failed" ? "조작 한도에 도달했습니다. 처음 배치로 다시 시작하세요."
+    : runStatus(run) === "full" ? `${MAX_ACTIONS}회 입력을 기록했습니다. 처음 배치로 다시 시작하세요.`
+    : completed ? "완료"
+    : highlight >= 0 ? `${coordinate(pieces[highlight].x, pieces[highlight].y)} 장치를 한 번 변경하세요.`
+    : result.triggered.length ? "금지 센서에 빛이 닿았습니다."
+    : result.loop ? "광선이 순환합니다."
+    : result.wrongColor.length ? "목표 또는 경유지의 색을 확인하세요." : "장치를 눌러 경로를 연결하세요.";
+  $("undo").disabled = !run.history.length || stopped;
+  $("hint").disabled = stopped;
+  $("result").hidden = !completed;
+  $("next").hidden = !completed || stage === TITLES.length;
+  if (completed) {
     const score = puzzleScore(true, moves, hints);
-    best[recordKey()] = Math.max(
-      Number(best[recordKey()]) || 0,
-      score,
-    );
-    save();
-    $("best").textContent = best[recordKey()] + " PT";
     $("result").replaceChildren();
     const h = document.createElement("h2"),
       p = document.createElement("p");
-    h.textContent = (stage === TITLES.length ? "마스터 회로 완성! " : stage % 3 === 0 ? `${CAMPAIGN[puzzle.tier].name} 완성! ` : "빛의 길이 연결되었습니다. ") + score + " PT";
+    h.textContent = `완료 · ${score}점`;
     p.textContent =
       "조작 " +
       moves +
       "회 · 힌트 " +
       hints +
-      "회 · " +
-      (score >= 850 ? "★★★" : score >= 650 ? "★★☆" : "★☆☆");
+      `회 · ${modeName()} · ${hints ? "힌트 사용" : "스스로 완료"}`;
     $("result").append(h, p);
     $("result").hidden = false;
     $("next").hidden = stage === TITLES.length;
     $("next").textContent = stage % 3 === 0 && stage < TITLES.length ? `다음 장: ${CAMPAIGN[puzzle.tier + 1].name}` : "다음 퍼즐";
-    $("status").textContent =
-      stage === TITLES.length
-        ? "마지막 퍼즐도 해결했습니다. 다른 코드로 다시 도전해보세요."
-        : "목표·경유지·안전 조건을 모두 달성했습니다. 다음 실험을 시작할 수 있습니다.";
-    $("board").classList.add("complete");
-    const level = $("levels").querySelector(`[data-stage="${stage}"]`);
-    level.classList.add("solved");
-    level.setAttribute("aria-label", level.getAttribute("aria-label").replace(/, 완료$/, "") + ", 완료");
-    const count = TITLES.filter((_, i) => best[recordKey(i + 1)]).length;
-    $("campaign-progress").textContent = `이 코드에서 ${count} / ${TITLES.length} 완료`;
-    $("campaign-meter").value = count;
-    for (const b of $("board").querySelectorAll("button")) b.disabled = true;
-    $("undo").disabled = true;
-    $("hint").disabled = true;
-    (stage < TITLES.length ? $("next") : $("result")).focus({ preventScroll: true });
   }
   $("board").classList.toggle("complete", completed);
   if (!completed && focusedPiece !== undefined) $("board").querySelector(`[data-piece="${focusedPiece}"]`)?.focus({ preventScroll: true });
   if (focusedStage !== undefined) $("levels").querySelector(`[data-stage="${focusedStage}"]`)?.focus({ preventScroll: true });
 }
-function rotate(i) {
-  if (completed || !Number.isInteger(i) || i < 0 || i >= pieces.length || pieces[i].fixed) return;
-  history.push(pieces.map((p) => ({ ...p })));
-  if (history.length > 256) history.shift();
-  pieces[i] = rotatePiece(pieces[i]);
-  moves++;
-  highlight = -1;
+function act(action) {
+  if (awaitingResume) return;
+  try { run = applyAction(run, action); } catch { return; }
+  persist();
   render();
+  if (completed) (stage < TITLES.length ? $("next") : $("result")).focus({ preventScroll: true });
 }
-$("undo").onclick = () => {
-  if (history.length && !completed) {
-    pieces = history.pop();
-    moves++;
-    highlight = -1;
-    render();
-  }
-};
+function rotate(i) { act({ type: "rotate", index: i }); }
+$("undo").onclick = () => act({ type: "undo" });
 $("board").onkeydown = (event) => {
   const index = Number(event.target.dataset.piece);
   if (!Number.isInteger(index) || !pieces[index]) return;
@@ -290,14 +288,24 @@ $("board").onkeydown = (event) => {
   candidates.sort((a, b) => Math.abs(a.x - current.x) + Math.abs(a.y - current.y) - Math.abs(b.x - current.x) - Math.abs(b.y - current.y));
   if (candidates[0]) $("board").querySelector(`[data-piece="${candidates[0].i}"]`)?.focus();
 };
-$("reset").onclick = start;
-$("hint").onclick = () => {
-  if (completed) return;
-  highlight = nextHint(puzzle, pieces);
-  if (highlight >= 0) {
-    hints++;
-    render();
-  }
+$("reset").onclick = () => start();
+$("hint").onclick = () => act({ type: "hint" });
+$("continue").onclick = () => {
+  if (!store.last) return;
+  run = restoreRun(store.last);
+  ({ seed, stage, mode } = run);
+  awaitingResume = false;
+  render();
+};
+$("mode").onchange = () => {
+  mode = $("mode").value;
+  start();
+};
+$("recent").onchange = () => {
+  const entry = store.recent.find((e) => e.seed === $("recent").value);
+  if (!entry) return;
+  ({ seed, stage, mode } = entry);
+  start();
 };
 $("next").onclick = () => {
   if (completed && stage < TITLES.length) {
@@ -320,10 +328,17 @@ $("new-puzzle").onclick = () => {
   start();
 };
 $("clear").onclick = () => {
-  if (confirm("이 브라우저의 퍼즐 최고 기록을 삭제할까요?")) {
-    best = {};
-    save();
-    start();
+  if (confirm("이 브라우저의 LIGHT ROUTE 코드·진행·최고 기록을 모두 삭제할까요?")) {
+    const ownCleared = clearStore(), summaryCleared = clearProgress();
+    if (!ownCleared) {
+      announce("일부 기록을 삭제하지 못했습니다. 브라우저 저장 설정을 확인하세요.");
+      return;
+    }
+    store = emptyStore();
+    for (const k of Object.keys(legacy ?? {})) delete legacy[k];
+    seed = freshSeed(); stage = 1; mode = "practice"; awaitingResume = false;
+    start({ initial: true });
+    announce(summaryCleared ? "기록을 삭제했습니다." : "퍼즐 기록은 삭제했습니다. 갤러리 요약을 삭제하지 못했습니다.");
   }
 };
 tool(
@@ -353,4 +368,4 @@ tool(
     return { stage, seed, targets: puzzle.goals.length, moves };
   },
 );
-start();
+start({ initial: true });
