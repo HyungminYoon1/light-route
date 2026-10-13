@@ -15,7 +15,7 @@ export function writeStore(store, storage) {
     const raw = JSON.stringify(store);
     if (new TextEncoder().encode(raw).length > MAX_STORAGE_BYTES) return false;
     storage.setItem(SESSION_KEY, raw);
-    return true;
+    return storage.getItem(SESSION_KEY) === raw;
   } catch { return false; }
 }
 export function clearStore(storage) {
@@ -23,6 +23,6 @@ export function clearStore(storage) {
     storage ??= globalThis.localStorage;
     storage.removeItem(SESSION_KEY);
     storage.removeItem("light-route-v1");
-    return true;
+    return storage.getItem(SESSION_KEY) === null && storage.getItem("light-route-v1") === null;
   } catch { return false; }
 }

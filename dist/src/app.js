@@ -278,6 +278,7 @@ function act(action) {
 function rotate(i) { act({ type: "rotate", index: i }); }
 $("undo").onclick = () => act({ type: "undo" });
 $("board").onkeydown = (event) => {
+  if (event.isComposing || event.keyCode === 229) return;
   const index = Number(event.target.dataset.piece);
   if (!Number.isInteger(index) || !pieces[index]) return;
   const direction = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }[event.key];

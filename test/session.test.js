@@ -182,7 +182,14 @@ test("gallery summary uses 15 allowlisted aggregate entries, genuine dates and o
   const storage = memoryStorage(), instant = "2026-10-09T03:00:00.000Z", now = () => new Date(instant);
   assert.equal(APP_IDS.length, 15);
   assert.equal(new Set(APP_IDS).size, 15);
-  storage.setItem(PROGRESS_KEY, JSON.stringify({ version: 1, apps: { "think-forge": { completed: 2, total: 5, updatedAt: instant }, evil: { seed: "private" } } }));
+  // D13: the user's 2026-10-13 decision supersedes the old sanitize-evil expectation.
+  const peer = { completed: 2, total: 5, updatedAt: instant };
+  const unknown = JSON.stringify({ version: 1, apps: { "think-forge": peer, evil: { seed: "private" } } });
+  storage.setItem(PROGRESS_KEY, unknown);
+  assert.equal(reportProgress(3, 18, storage, now), false, "approved contract rejects unknown app without sanitizing");
+  assert.equal(clearProgress(storage), false);
+  assert.equal(storage.getItem(PROGRESS_KEY), unknown);
+  storage.setItem(PROGRESS_KEY, JSON.stringify({ version: 1, apps: { "think-forge": peer } }));
   assert.equal(reportProgress(3, 18, storage, now), true);
   const summary = JSON.parse(storage.getItem(PROGRESS_KEY));
   assert.deepEqual(Object.keys(summary.apps).sort(), ["light-route", "think-forge"]);

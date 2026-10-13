@@ -1,5 +1,13 @@
 # 검증 기록
 
+## 2026-10-13 — 승인된 공유 요약 보존 계약 / LOCAL 후속 검증
+
+[승인 계약·새 경계 매트릭스·RED/GREEN 증거·브라우저 흐름](edge-cases-20261013.md#공유-요약-승인-계약-후속-검증). D13에서 정책 충돌 RESOLVED. 기존 unknown `evil` sanitize assertion은 사용자 승인에 따른 계약 변경으로 명시 수정했다. 새 Node12개 BEFORE 3PASS/9FAIL→12PASS; 변경한 기존 시험 1FAIL→1PASS. 전체 `npm test` 41/41 PASS, `npm run check`/`git diff --check` PASS. 기존 browser 회귀 + 공유 상태 9개 Chrome 흐름/277 checks PASS, 1440/390/320 캡처 확인. 공유 raw 보존·peer 보존·잘못된 root/entry/primitive/빈 문자열·no-op IO·private 완료/이어하기/삭제 분리 확인. Node는 기존 CI 실행 대상; 두 browser harness는 수동, remote CI/LIVE NOT_RUN. 이번에는 light-route만 변경했으며 model/session/app 및 다른 저장소/랭킹 복사본은 그대로다.
+
+## 2026-10-13 — systematic edge-case audit / LOCAL
+
+[경계 매트릭스·신규 테스트·실패 전후·명령·소스 및 미검증 범위](edge-cases-20261013.md). 기존23 + 신규6 = npm test 29/29 PASS; npm run check / git diff --check PASS. 신규5개 baseline PASS는 coverage추가이며 readback1개와 IME browser회귀만 RED_GREEN. 격리 actualChrome primary/negative flows 및1440/390/320입력·캡처 PASS. Browserharness 현CI미실행/remoteCI·LIVE NOT_RUN. 공용rankingclient/rules보존.
+
 ## 2026-10-13 — 저장 필드 검증·경로 과제 / LOCAL
 
 - UI 변경: YES. 현재 코드/방식을 유지하는 9/12/18단계 분석 과제 버튼·설명. 저장 snapshot은 기존9개 필드만 허용. 이전 코드는 임의 결과 필드를 무시했지만 점수로 신뢰하지는 않았다; 이번 수정은 검증 계약 보강이다.

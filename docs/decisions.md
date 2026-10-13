@@ -1,5 +1,25 @@
 # 결정 기록
 
+## D13 — 공유 요약 원문 보존과 갱신 중단 계약 (2026-10-13, 사용자 명시 승인)
+
+- 맥락: D12 감사에서 architecture/D10의 잘못된 공유 상태 보존과 기존 progress.js/session.test.js의 unknown `evil` 제거 기대가 충돌하여 해당 부분을 중단했다. 사용자가 이번 후속 작업에서 “unknown fields / malformed state는 원본 보존·갤러리 요약 갱신 중단”을 명시 승인했다.
+- 대안: 기존 sanitize 유지; 공유 상태를 새 형식으로 이전/복구; 기존 형식 그대로 전체 검증 후 정상 상태에서만 자기 항목 변경.
+- 결정: 세 번째를 적용한다. root는 version/apps 두 필드, apps는 기존 허용 15개 ID만, 각 entry는 completed/total/updatedAt 세 필드만 허용한다. 기존 정수 0..total<=1000/정규 ISO UTC/8KiB 경계, own total18, 버전·키·보존 상한은 유지한다. root/entry/type/date/count/JSON/크기 오류나 unknown 필드가 하나라도 있으면 report/clear 모두 false, 쓰기·삭제 시도 없이 전체 raw 문자열을 바이트 그대로 보존한다. 저장된 빈 문자열/공백은 오류이며, getItem===null만 부재다. 정상 apps:{}는 허용한다.
+- 무변경/IO 결정: own entry가 없을 때 clear는 원문/부재를 유지하고 true; 직렬화 결과가 이미 같은 report도 쓰지 않는다. 정상 변경은 peer 값과 필드 순서를 유지하며 container 공백은 JSON 직렬화로 바뀔 수 있다. 공유 setItem의 동일 문자열 readback 및 자체 두 키 삭제의 null readback을 확인한다. 무시된 setItem/removeItem 또는 확인 불가를 성공으로 보고하지 않는다.
+- 이유: 타 앱 데이터의 자동 정리·수선 권한을 추정하지 않고, 승인된 공유 계약과 사용자의 기기 내 기록을 보존한다. 공유 실패는 자체 저장 성공을 되돌리지 않는다. 기존 앱의 별도 실패 안내와 플레이/이어하기/자체 삭제 경계를 재사용한다.
+- 테스트 계약 변경: `gallery summary uses 15 allowlisted aggregate entries, genuine dates and own-only clear`의 과거 unknown `evil` 제거 성공 assertion은 이 승인으로 명시적으로 폐기했다. 새 expectation은 report/clear false와 원문 동일이며, 별도의 정상 peer fixture에서 기존 정상 갱신·자기 삭제 assertion을 유지했다. 통과를 위한 assertion 완화가 아니다. 기존 production에서 변경한 assertion FAIL을 실행·보존한 뒤 수정했다.
+- 영향 파일: dist/src/progress.js, dist/src/storage.js, test/session.test.js, new test/progress.test.js, new tools/summary-browser.mjs, architecture.md, README.md, docs/edge-cases-20261013.md, docs/verification.md.
+- 검증/검토: 신규 12개 BEFORE 3PASS/9FAIL → SAME command 12PASS; 승인 변경 기존 시험 1FAIL→1PASS; 전체41PASS, check PASS. 격리 Chrome에서 정상/차단/무시된 IO 9개 흐름 PASS. 상세 명령·원문 로그·캡처는 edge audit. Node tests는 기존 CI 대상, browser harness는 수동이다. 다중 탭 트랜잭션/실제 디스크 영속성은 보장하지 않으며 readback 실패 시 이미 반영된 쓰기를 임의 rollback하지 않는다. 두 private 키의 부분 삭제도 원자적이지 않으며 확인 실패로 보고한다. 모델/세션/점수/생성/랭킹 클라이언트/타 저장소는 이번 후속 작업에서 변경하지 않았다.
+
+## D12 — systematic input and durable-save audit (2026-10-13)
+
+- Context: 실제회귀에서 no-op/stale/deniedread도 저장성공보고, IME조합이단축키/초점변경.
+- Options: setItem만신뢰 / 형식변경 / own-key동일문자열readback;조합키실행 / 모든키비활성화 / isComposing와229만무시.
+- Decision: storage.js의기존ownkey쓰기뒤readback확인, 실패는기존memory-only경로. app.js는조합중게임단축키/초점변경하지않음. 새저장key/field/cap/retention/network/score/version변경없음.
+- Rationale: documented durable-save전제/입력의도를지키는conservative localfix. 실제FAIL후최소수정및같은testPASS. Legitimateassertions/합법replays유지.
+- Affected files: dist/src/app.js, dist/src/storage.js, test/edge.test.js, tools/edge-browser.mjs, docs/edge-cases-20261013.md, docs/verification.md.
+- Review: readback은cross-tab transaction/diskdurability보증아님. RealOSIME/multi-tab NOT_RUN;syntheticfixture/actualUI분리. Nodecases기존CI에포함/browserharness수동. 당시 shared-summary reject/preserve 대sanitize정책충돌은 affected part STOPPED/부모인계였다. 이후 사용자 명시 승인으로 D13에서 해결했다.
+
 ## D11 — 저장 필드 계약과 경로 분석 과제 (2026-10-13)
 
 - 맥락: restoreRun은 임의 score/status 같은 필드를 묵인했다. 계산 점수에는 쓰지 않았지만 문서의 결과 주입 거절 계약과 맞지 않았다.
