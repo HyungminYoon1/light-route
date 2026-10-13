@@ -1,5 +1,7 @@
 # LIGHT ROUTE — 빛의 미궁
 
+2026-10-13 로컬 개선: 같은 코드의 9/12/18단계 경로 설계 과제를 추가했습니다. 정상 저장 형식을 유지하면서 임의 결과 필드를 거절합니다. [검증과 한계](docs/verification.md) · [과제 근거](docs/provenance.md).
+
 현재 변경은 로컬 구현입니다. 브라우저·공개 배포 상태는 [검증 기록](docs/verification.md)에 구분합니다.
 
 [사이트 열기](https://hyungminyoon1.github.io/light-route/)

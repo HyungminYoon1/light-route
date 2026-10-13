@@ -1,4 +1,5 @@
 @charset "UTF-8";
+.practice-notes{margin:14px 0;padding:12px 16px;border:1px solid var(--line,#b4cac4);border-radius:6px;font-size:12px;line-height:1.8}.practice-notes summary{cursor:pointer;font-weight:700}.practice-notes button{min-height:44px;margin:6px 8px 6px 0}.practice-notes p{overflow-wrap:anywhere}@media(max-width:720px){.practice-notes button{display:block}}
 :root {
   font-family: "Segoe UI", "Malgun Gothic", sans-serif;
   background: #f8fafc;

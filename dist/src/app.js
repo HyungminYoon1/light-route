@@ -289,6 +289,10 @@ $("board").onkeydown = (event) => {
   if (candidates[0]) $("board").querySelector(`[data-piece="${candidates[0].i}"]`)?.focus();
 };
 $("reset").onclick = () => start();
+for (const button of document.querySelectorAll("[data-practice-stage]")) button.onclick = () => {
+  stage = Number(button.dataset.practiceStage);
+  start();
+};
 $("hint").onclick = () => act({ type: "hint" });
 $("continue").onclick = () => {
   if (!store.last) return;

@@ -11,6 +11,15 @@ function memoryStorage() {
   const data = new Map();
   return { getItem: (key) => data.get(key) ?? null, setItem: (key, value) => data.set(key, value), removeItem: (key) => data.delete(key) };
 }
+test("resume rejects unexpected result fields instead of silently stripping them", () => {
+  const snapshot = snapshotRun(createRun(18, "strict-resume"));
+  for (const field of ["score", "status", "player", "extra"]) {
+    const forged = { ...snapshot, [field]: field === "score" ? 1000 : "complete" };
+    assert.throws(() => restoreRun(forged), TypeError);
+    assert.equal(normalizeStore({ ...emptyStore(), last: forged, records: [forged] }).last, null);
+  }
+  assert.deepEqual(snapshotRun(restoreRun(snapshot)), snapshot);
+});
 function finish(run) {
   for (const index of challengePlan(run.puzzle).rotations) {
     if (runStatus(run) === "complete") break;

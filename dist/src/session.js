@@ -72,6 +72,9 @@ export function snapshotRun(run) {
 }
 
 export function restoreRun(snapshot) {
+  const fields = ["version", "rulesVersion", "seed", "stage", "mode", "actions", "settings", "moves", "hints"];
+  if (!snapshot || typeof snapshot !== "object" || Array.isArray(snapshot) ||
+    Object.keys(snapshot).length !== fields.length || Object.keys(snapshot).some((key) => !fields.includes(key))) throw TypeError("Invalid saved fields");
   if (!snapshot || snapshot.version !== VERSION || snapshot.rulesVersion !== RUN_VERSION ||
     !modes.includes(snapshot.mode) ||
     !Array.isArray(snapshot.actions) || snapshot.actions.length > MAX_ACTIONS ||

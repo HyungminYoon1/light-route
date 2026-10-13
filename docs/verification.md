@@ -1,5 +1,17 @@
 # 검증 기록
 
+## 2026-10-13 — 저장 필드 검증·경로 과제 / LOCAL
+
+- UI 변경: YES. 현재 코드/방식을 유지하는 9/12/18단계 분석 과제 버튼·설명. 저장 snapshot은 기존9개 필드만 허용. 이전 코드는 임의 결과 필드를 무시했지만 점수로 신뢰하지는 않았다; 이번 수정은 검증 계약 보강이다.
+- BUG BEFORE: node --test --test-name-pattern 'resume rejects unexpected' test/session.test.js에서 Missing expected exception(TypeError) 실패. 수정 후 score/status/player/extra를 거절하고 정상 snapshot은 동일 복원.
+- LOCAL: npm test 23/23 PASS, fail/skipped0 (3545.1025ms), 기존22개 유지 + 필드 회귀1개. 1800 생성 판의 독립 광선 판정,144 대체 배치,360 제한 이동 완료/실패,색/분기/센서/순환/상한/보존/요약 시험 포함. npm run check PASS, git diff --check PASS.
+- BROWSER: 격리 Playwright 세션, loopback, 1440×1000/390×900/320×900. 코드 qa-0·제한 이동·과제18 선택→6회 회전→새로고침/이어하기6회→11/13회835점 완료. 390px 같은 장치를13회 변경하면 미완료 한도 종료와 힌트/취소/회전 잠금. 320px Space 회전과 되돌리기 비용2회 확인 후 처음 배치에서 실제11회 완료. 관측한 document overflow/pageerror0.
+- 캡처: 부모 output/qa-20261013/light-route/desktop.png(18단계6회·새 과제), mobile-390.png(한도 종료), mobile-320.png(835점 완료). 저장소에 QA 산출물을 포함하지 않도록 사용자 지정 부모 output으로 이동했다. 실제 이미지를 열어 배치를 확인했다.
+- 선택자: .practice-notes summary, [data-practice-stage], #seed, #mode, #continue, #moves, #budget, '#board button'의 행/열 aria-label.
+- 변경 파일: dist/index.html/styles.css, dist/src/app.js/session.js, test/session.test.js, README.md, docs/decisions.md/verification.md/provenance.md.
+- 소스 범위: 저장소 PARTIAL(전체 목록 후 관련 선택). architecture/README/decisions VERIFIED; requirements/api-spec/AGENTS 없음. 변경 파일·모델/실행/직접 관련 시험 검토. 변경 없는 아트·배포 workflow·전체 CSS의 새 전수 심사는 제외.
+- NOT_RUN: 물리 터치·다른 브라우저·보조기술, 모든 코드·단계의 개별 브라우저 완주, 새로운 저장 거부/다중탭 UI, 사람의 난도 평가, 원격 CI/LIVE. 생성/점수/버전/기존 canonical 기록 유지. 커밋/푸시/배포/갤러리 편집/다른 에이전트0. 설명 근거: provenance.md.
+
 ## 2026-10-09 — 코드 이력·이어하기·제한 이동·갤러리 요약
 
 ### LOCAL_MODEL / STATIC — PASS
